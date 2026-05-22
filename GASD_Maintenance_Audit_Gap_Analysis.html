@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GASD Internal Audit – Maintenance Gap Analysis</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#f5f4f0;line-height:1.5}
+  .page{max-width:1100px;margin:0 auto;padding:24px}
+
+  /* Header */
+  .doc-header{background:#1a2a3a;color:#fff;padding:28px 32px;border-radius:8px;margin-bottom:24px}
+  .doc-header h1{font-size:18px;font-weight:700;letter-spacing:.3px;margin-bottom:6px}
+  .doc-header .sub{font-size:12px;opacity:.7;margin-bottom:14px}
+  .meta-row{display:flex;flex-wrap:wrap;gap:16px;font-size:11px}
+  .meta-item{background:rgba(255,255,255,.1);padding:4px 10px;border-radius:4px}
+  .meta-item span{opacity:.65;margin-right:4px}
+
+  /* Nav tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap}
+  .tab{padding:7px 16px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:#555;transition:all .15s}
+  .tab.active{background:#1a2a3a;color:#fff;border-color:#1a2a3a}
+  .tab:hover:not(.active){background:#eee}
+
+  /* Section */
+  .section{display:none}
+  .section.active{display:block}
+
+  /* Cards */
+  .card{background:#fff;border:0.5px solid #d5d3cc;border-radius:8px;padding:18px 20px;margin-bottom:16px}
+  .card-title{font-size:13px;font-weight:700;color:#1a2a3a;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px}
+
+  /* Severity badges */
+  .sev{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.3px}
+  .sev-critical{background:#fce8e8;color:#a32d2d}
+  .sev-major{background:#faeeda;color:#7a4a0a}
+  .sev-minor{background:#e6f1fb;color:#0c447c}
+  .sev-ofi{background:#eaf3de;color:#27500a}
+  .sev-nc{background:#f5f4f0;color:#5f5e5a}
+
+  /* Table */
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  th{background:#1a2a3a;color:#fff;padding:8px 10px;text-align:left;font-weight:600;font-size:11px}
+  td{padding:7px 10px;border-bottom:0.5px solid #e8e6de;vertical-align:top}
+  tr:hover td{background:#fafaf8}
+  .td-ref{font-weight:700;color:#1a2a3a;white-space:nowrap}
+
+  /* Score bar */
+  .score-bar-wrap{background:#eee;border-radius:4px;height:8px;width:100%;overflow:hidden}
+  .score-bar{height:8px;border-radius:4px;transition:width .3s}
+  .bar-red{background:#e24b4a}
+  .bar-amber{background:#EF9F27}
+  .bar-green{background:#639922}
+
+  /* Process map boxes */
+  .pmap{display:flex;align-items:flex-start;gap:0;flex-wrap:nowrap;overflow-x:auto;padding-bottom:8px}
+  .pstep{flex:0 0 auto;width:140px;background:#fff;border:1px solid #ccc;border-radius:6px;padding:10px;position:relative;margin-right:28px}
+  .pstep:last-child{margin-right:0}
+  .pstep::after{content:'→';position:absolute;right:-22px;top:50%;transform:translateY(-50%);color:#888;font-size:16px}
+  .pstep:last-child::after{display:none}
+  .pstep-title{font-size:11px;font-weight:700;color:#1a2a3a;margin-bottom:4px}
+  .pstep-actor{font-size:10px;color:#888;margin-bottom:6px}
+  .gap-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+  .gap-item{font-size:10px;display:flex;align-items:flex-start;gap:4px;margin-bottom:2px}
+  .pstep.has-critical{border-color:#e24b4a;border-width:2px}
+  .pstep.has-major{border-color:#EF9F27;border-width:2px}
+
+  /* Stats row */
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+  .stat-card{background:#fff;border:0.5px solid #d5d3cc;border-radius:8px;padding:14px 16px;text-align:center}
+  .stat-num{font-size:26px;font-weight:700;color:#1a2a3a}
+  .stat-lbl{font-size:11px;color:#888;margin-top:2px}
+  .stat-card.red .stat-num{color:#a32d2d}
+  .stat-card.amber .stat-num{color:#854f0b}
+  .stat-card.green .stat-num{color:#3b6d11}
+
+  /* Gap matrix */
+  .matrix-row{display:flex;gap:10px;margin-bottom:10px;align-items:stretch}
+  .matrix-label{width:160px;flex:0 0 160px;font-size:11px;font-weight:600;color:#333;padding:6px 8px;background:#f5f4f0;border-radius:4px;display:flex;align-items:center}
+  .matrix-cells{display:flex;flex:1;gap:8px;flex-wrap:wrap}
+  .matrix-cell{border-radius:4px;padding:4px 8px;font-size:10px;font-weight:600}
+  .mc-c{background:#fce8e8;color:#a32d2d;border:1px solid #f09595}
+  .mc-m{background:#faeeda;color:#7a4a0a;border:1px solid #FAC775}
+  .mc-n{background:#f5f4f0;color:#5f5e5a;border:1px solid #d5d3cc}
+
+  /* Odoo flow */
+  .odoo-flow{display:flex;flex-direction:column;gap:8px}
+  .odoo-stage{display:flex;align-items:flex-start;gap:12px}
+  .odoo-num{width:28px;height:28px;border-radius:50%;background:#1a2a3a;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 28px;margin-top:2px}
+  .odoo-box{flex:1;border:1px solid #d5d3cc;border-radius:6px;padding:10px 12px;background:#fff}
+  .odoo-box-title{font-size:12px;font-weight:700;color:#1a2a3a;margin-bottom:4px}
+  .odoo-box-detail{font-size:11px;color:#555}
+  .odoo-gap{background:#fce8e8;border-color:#f09595}
+  .odoo-gap .odoo-box-title{color:#a32d2d}
+
+  /* PCE eval */
+  .pce-role{margin-bottom:20px}
+  .pce-role-title{font-size:13px;font-weight:700;color:#1a2a3a;margin-bottom:8px;padding:6px 10px;background:#e8f0f8;border-radius:4px;border-left:3px solid #1a2a3a}
+  .criterion-row{display:flex;align-items:flex-start;gap:10px;padding:5px 0;border-bottom:0.5px solid #eee}
+  .crit-ref{width:60px;flex:0 0 60px;font-weight:700;font-size:11px;color:#1a2a3a}
+  .crit-text{flex:1;font-size:11px}
+  .crit-gap{width:220px;flex:0 0 220px;font-size:11px;color:#a32d2d}
+  .crit-action{width:200px;flex:0 0 200px;font-size:11px;color:#185fa5}
+
+  /* Responsive */
+  @media(max-width:700px){
+    .pmap{flex-direction:column}
+    .pstep{width:100%;margin-right:0;margin-bottom:24px}
+    .pstep::after{right:50%;top:auto;bottom:-20px;transform:translateX(50%) rotate(90deg)}
+    .matrix-row{flex-direction:column}
+    .matrix-label{width:100%}
+    .crit-gap,.crit-action{display:none}
+  }
+
+  .print-note{text-align:right;font-size:10px;color:#aaa;margin-bottom:8px}
+  .section-title{font-size:15px;font-weight:700;color:#1a2a3a;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid #1a2a3a}
+  .iso-tag{font-size:10px;color:#185fa5;background:#e6f1fb;padding:1px 5px;border-radius:2px;margin-left:4px}
+  .legend{display:flex;gap:14px;font-size:11px;margin-bottom:14px;flex-wrap:wrap}
+  .legend-item{display:flex;align-items:center;gap:5px}
+  .connector{width:30px;height:2px;background:#ccc;display:inline-block;position:relative;top:1px}
+  .conn-c{background:#e24b4a}
+  .conn-m{background:#EF9F27}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="doc-header">
+  <h1>GASD Internal Audit — Maintenance Department</h1>
+  <div class="sub">Gap Analysis · Process Map · Odoo Transaction Flow · PCE Readiness</div>
+  <div class="meta-row">
+    <div class="meta-item"><span>Reference:</span>GASD-PCE-MAINT-001 / IAF-001 v2.0</div>
+    <div class="meta-item"><span>Audit Period:</span>May 2026 → Oct 2026</div>
+    <div class="meta-item"><span>ISO Standard:</span>ISO 9001:2015</div>
+    <div class="meta-item"><span>Prepared by:</span>Solomon Diaz — Co-Lead Auditor</div>
+    <div class="meta-item"><span>Reviewed by:</span>Amro Gasim — Lead Auditor</div>
+    <div class="meta-item"><span>Classification:</span>CONFIDENTIAL — INTERNAL USE ONLY</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="show('executive')">Executive Summary</button>
+  <button class="tab" onclick="show('gap')">Gap Analysis</button>
+  <button class="tab" onclick="show('processmap')">Process Map</button>
+  <button class="tab" onclick="show('odoo')">Odoo Transaction Flow</button>
+  <button class="tab" onclick="show('pce')">PCE Readiness</button>
+  <button class="tab" onclick="show('car')">CAR Register</button>
+</div>
+
+<!-- =================== EXECUTIVE SUMMARY =================== -->
+<div id="executive" class="section active">
+  <p class="print-note">GASD-IAF-001 v2.0 | ISO 9001:2015 | CONFIDENTIAL</p>
+  <div class="section-title">Executive Summary</div>
+
+  <div class="stats-row">
+    <div class="stat-card red"><div class="stat-num">20</div><div class="stat-lbl">Critical Findings</div></div>
+    <div class="stat-card amber"><div class="stat-num">9</div><div class="stat-lbl">Major Findings</div></div>
+    <div class="stat-card"><div class="stat-num">3</div><div class="stat-lbl">Minor / Non-Critical</div></div>
+    <div class="stat-card red"><div class="stat-num">FAIL</div><div class="stat-lbl">Audit Result</div></div>
+    <div class="stat-card red"><div class="stat-num">0</div><div class="stat-lbl">SOPs in Place</div></div>
+    <div class="stat-card amber"><div class="stat-num">3</div><div class="stat-lbl">Regions Audited</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Audit Result Rationale</div>
+    <table>
+      <tr><th>SEA Score</th><th>Critical CARs Present</th><th>Final Result</th><th>Governance Basis (IAF-001 v2.0 §5.2)</th></tr>
+      <tr>
+        <td>Below 60%</td>
+        <td><span class="sev sev-critical">20 Critical CARs</span></td>
+        <td style="font-weight:700;color:#a32d2d">FAIL</td>
+        <td>Any Critical CAR = automatic Fail regardless of score. System is operationally dysfunctional across all three regions (Dubai, Abu Dhabi, Al Ain).</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Top 5 Systemic Failures</div>
+    <table>
+      <tr><th>#</th><th>Failure</th><th>Severity</th><th>ISO Clause</th><th>Evidence</th></tr>
+      <tr>
+        <td class="td-ref">1</td>
+        <td><strong>No SLA framework</strong> — no defined, communicated, or measured response/resolution targets</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td>8.5.1, 9.1.1</td>
+        <td>S-001 — No SLA document found; Odoo has no breach alerts</td>
+      </tr>
+      <tr>
+        <td class="td-ref">2</td>
+        <td><strong>No supervisory structure</strong> — no Maintenance In-Charge; field teams operate with zero oversight</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td>5.3, 7.1.2</td>
+        <td>S-007; F-020, F-021 — decisions made unilaterally on-site</td>
+      </tr>
+      <tr>
+        <td class="td-ref">3</td>
+        <td><strong>No customer close-out process</strong> — no signature, acknowledgement, or close-out verification across all 3 regions</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td>8.6, 7.5</td>
+        <td>S-005; F-025, F-029 — confirmed cross-regional systemic gap</td>
+      </tr>
+      <tr>
+        <td class="td-ref">4</td>
+        <td><strong>No pre-work site protection or documentation</strong> — no photos, no floor covering, no consent before starting</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td>7.5, 8.5.1</td>
+        <td>F-015, F-016, F-023 — liability exposure confirmed</td>
+      </tr>
+      <tr>
+        <td class="td-ref">5</td>
+        <td><strong>Cancelled ticket governance absent</strong> — cancellations issued without justification, review, or contact documentation</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td>7.5, 8.7, 10.2</td>
+        <td>S-003; F-031 — MAN14624 colour complaint suppressed without investigation</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Finding Distribution by Category</div>
+    <table>
+      <tr><th>Category</th><th>Critical</th><th>Major/Non-Crit</th><th>Total</th><th>Primary ISO Gap</th></tr>
+      <tr><td>Process (Scheduling, Dispatch, Documentation)</td><td>12</td><td>5</td><td>17</td><td>8.5.1, 7.5, 8.2.1</td></tr>
+      <tr><td>People (Competence, Conduct, Communication)</td><td>7</td><td>4</td><td>11</td><td>7.2, 7.3, 8.2.1</td></tr>
+      <tr><td>System (Odoo, Governance, Traceability)</td><td>1</td><td>0</td><td>1</td><td>7.5, 8.5.2</td></tr>
+      <tr><td>Systemic / Cross-regional</td><td>20 (total)</td><td>9 (total)</td><td>31</td><td>Multiple</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">SEA Checklist Score (Pre-PCE Assessment)</div>
+    <table>
+      <tr><th>Section</th><th>Area</th><th>Max</th><th>Estimated Score</th><th>Status</th></tr>
+      <tr><td>B</td><td>Process Understanding</td><td>4</td><td style="color:#a32d2d;font-weight:700">1</td><td><span class="sev sev-critical">FAIL</span></td></tr>
+      <tr><td>C</td><td>Control Design</td><td>4</td><td style="color:#a32d2d;font-weight:700">0</td><td><span class="sev sev-critical">FAIL</span></td></tr>
+      <tr><td>D</td><td>Control Operation</td><td>4</td><td style="color:#a32d2d;font-weight:700">1</td><td><span class="sev sev-critical">FAIL</span></td></tr>
+      <tr><td>E</td><td>Risk &amp; Compliance</td><td>4</td><td style="color:#a32d2d;font-weight:700">0</td><td><span class="sev sev-critical">FAIL</span></td></tr>
+      <tr><td>F</td><td>Observations &amp; Evidence</td><td>4</td><td style="color:#a32d2d;font-weight:700">1</td><td><span class="sev sev-critical">FAIL</span></td></tr>
+      <tr style="font-weight:700"><td colspan="2">TOTAL</td><td>20</td><td style="color:#a32d2d">3 / 20 (15%)</td><td><span class="sev sev-critical">SYSTEM FAIL</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- =================== GAP ANALYSIS =================== -->
+<div id="gap" class="section">
+  <div class="section-title">Gap Analysis — SOP &amp; Maintenance Team Structure</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="connector conn-c"></div> Critical Gap</div>
+    <div class="legend-item"><div class="connector conn-m"></div> Major Gap</div>
+    <div class="legend-item"><span class="sev sev-critical">C</span> ISO 9001:2015 Critical Non-conformity</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">GAP-01: Organisational Structure &amp; Accountability <span class="iso-tag">ISO 5.3, 7.1.2</span></div>
+    <table>
+      <tr><th>Ref</th><th>SOP / Requirement</th><th>Current State (Observed)</th><th>Gap</th><th>Severity</th></tr>
+      <tr>
+        <td class="td-ref">G1.1</td>
+        <td>Maintenance In-Charge role with defined authority, site oversight, and CAR authority</td>
+        <td>No In-Charge role exists. Field teams operate with no supervisor; drivers and carpenters self-manage</td>
+        <td>No accountability chain; errors go uncorrected; no feedback loop</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G1.2</td>
+        <td>Decision authority matrix for on-site decisions</td>
+        <td>Teams make independent on-site decisions including task closure without supervisor verification</td>
+        <td>Unauthorised actions or paralysis when issues arise outside Odoo task list</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G1.3</td>
+        <td>Segregation of duties in material requests (raiser ≠ approver)</td>
+        <td>Same two individuals raise and approve material requests with no independent review</td>
+        <td>Uncontrolled procurement pathway; fraud and waste risk</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G1.4</td>
+        <td>Leave-aware lead assignment and team coverage planning</td>
+        <td>Leads assigned to staff on leave; no auto-reassignment logic in Odoo/CRM</td>
+        <td>Unattended leads and client drop-off</td>
+        <td><span class="sev sev-major">MAJOR</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G1.5</td>
+        <td>After-hours coverage model with defined escalation and response path</td>
+        <td>No after-hours protocol; urgent requests outside working hours have no structured response</td>
+        <td>SLA failure; unmanaged client risk overnight and weekends</td>
+        <td><span class="sev sev-major">MAJOR</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">GAP-02: Scheduling &amp; Dispatch Controls <span class="iso-tag">ISO 8.2.1, 8.5.1</span></div>
+    <table>
+      <tr><th>Ref</th><th>SOP / Requirement</th><th>Current State (Observed)</th><th>Gap</th><th>Severity</th></tr>
+      <tr>
+        <td class="td-ref">G2.1</td>
+        <td>Pre-visit client confirmation SOP — no dispatch without confirmed availability</td>
+        <td>Task MAN9423 dispatched at 10:44 PM without client confirmation; team arrived at 8:33 AM against stated availability</td>
+        <td>Wasted travel, poor CSAT, SLA clock distortion</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G2.2</td>
+        <td>Client scheduling preferences captured in Odoo at ticket creation</td>
+        <td>No scheduling preference field used in Odoo; Coordinator does not confirm appointment window</td>
+        <td>Uncoordinated visits; client dissatisfaction pattern across all regions</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G2.3</td>
+        <td>Competence-based team composition validated by In-Charge before dispatch</td>
+        <td>Shanu (poor maintenance history) deployed with untrained driver to client site (MAN/7200)</td>
+        <td>Resource governance failure; repeat performance risk</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G2.4</td>
+        <td>Pre-departure materials checklist based on Odoo task scope</td>
+        <td>Teams repeatedly leaving site to collect missing materials (MAN9461 — Shanu); no checklist process</td>
+        <td>Time inefficiency; 3-hour SLA breach risk</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">GAP-03: On-Site Task Execution SOPs <span class="iso-tag">ISO 8.5.1, 7.2</span></div>
+    <table>
+      <tr><th>Ref</th><th>SOP / Requirement</th><th>Current State (Observed)</th><th>Gap</th><th>Severity</th></tr>
+      <tr>
+        <td class="td-ref">G3.1</td>
+        <td>Mandatory client greeting and pre-work briefing before commencing any work</td>
+        <td>Teams commence work immediately on arrival — no introduction, no scope explanation, no consent (MAN9278, MAN/7200)</td>
+        <td>Client privacy breach; professional conduct failure</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G3.2</td>
+        <td>Pre-work site condition photos (min 3) uploaded to Odoo before work begins</td>
+        <td>No pre-work photos taken at any observed visit; no floor or fixture protection laid</td>
+        <td>Zero evidence of pre-existing condition; liability exposure for damage claims (MAN9461, MAN9192)</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G3.3</td>
+        <td>Site Quality Check (SQC) — holistic defect identification beyond Odoo task list</td>
+        <td>Teams execute only Odoo-listed tasks; visible defects (door gaps, faded handles, silicone) ignored entirely</td>
+        <td>Recurring revisit risk; client perception of incomplete service</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G3.4</td>
+        <td>Technical justification for all material replacements before close-out</td>
+        <td>Replacements made without documented diagnosis, root cause, or In-Charge authorisation trail</td>
+        <td>Uncontrolled material consumption; audit trail absent</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G3.5</td>
+        <td>Defined technical SOPs: hinge replacement sequence, chemical application zones, drying protocols</td>
+        <td>Hinges replaced without level-check; WD-40 applied near baby area without protection; touch-up before drying</td>
+        <td>Workmanship defects introduced during maintenance; quality worse than pre-visit</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G3.6</td>
+        <td>Materials shortage protocol — coordinator notification + follow-up sub-ticket + client update within 24hr</td>
+        <td>Missing replacement rubber (MAN9461) — task left incomplete, client not informed, supervisor not notified, no follow-up ticket</td>
+        <td>SLA breach; broken client promise; no recovery path</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">GAP-04: Customer Communication &amp; Close-Out <span class="iso-tag">ISO 8.2.1, 8.6, 7.4</span></div>
+    <table>
+      <tr><th>Ref</th><th>SOP / Requirement</th><th>Current State (Observed)</th><th>Gap</th><th>Severity</th></tr>
+      <tr>
+        <td class="td-ref">G4.1</td>
+        <td>Mandatory customer acknowledgement/signature at task close-out in Odoo</td>
+        <td>No close-out signature process exists across Dubai, AUH, or Al Ain — teams unaware any requirement exists</td>
+        <td>No evidence of service delivery; exposure to disputed claims. Cross-regional systemic gap (F-025, F-029)</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G4.2</td>
+        <td>Approved WhatsApp communication script — mandatory compliance, weekly spot-checks</td>
+        <td>All three regions (Dubai, AUH, Al Ain) deviate from approved script; communication informal and unscripted</td>
+        <td>Brand inconsistency; unstructured service experience; no quality trail</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G4.3</td>
+        <td>WhatsApp response SLA: first acknowledgement within 1 hour; escalation at 2 hours</td>
+        <td>Systemic delays in WhatsApp responses; no defined SLA; no escalation trigger for unanswered messages</td>
+        <td>Client abandonment risk; no management visibility of response failures</td>
+        <td><span class="sev sev-major">MAJOR</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G4.4</td>
+        <td>Formal customer complaint channel with acknowledgement SLA and resolution tracking</td>
+        <td>No structured complaint channel; feedback received only via WhatsApp/phone with no systematic resolution</td>
+        <td>Complaints not captured; trends invisible; management review inputs absent</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">GAP-05: Odoo System Controls &amp; Ticket Governance <span class="iso-tag">ISO 7.5, 8.5.2, 9.1.1</span></div>
+    <table>
+      <tr><th>Ref</th><th>SOP / Requirement</th><th>Current State (Observed)</th><th>Gap</th><th>Severity</th></tr>
+      <tr>
+        <td class="td-ref">G5.1</td>
+        <td>Maintenance tickets linked to originating installation projects in Odoo</td>
+        <td>Tickets created independently of projects; no visit count per client; warranty eligibility unverifiable</td>
+        <td>Repeat-visit patterns invisible; COPQ tracking impossible</td>
+        <td><span class="sev sev-major">MAJOR</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G5.2</td>
+        <td>Cancellation governance: documented justification, independent reviewer, min 3 contact attempts</td>
+        <td>Cancellations issued without justification or review; MAN14624 colour-change complaint suppressed</td>
+        <td>Quality complaints suppressed; no audit trail; re-opened complaint risk</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G5.3</td>
+        <td>No-contact dispatch prohibited; SLA clock not started on unconfirmed visits</td>
+        <td>SLA clock starts on dispatch regardless of whether client confirmed availability</td>
+        <td>SLA data meaningless; performance metrics inflated</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G5.4</td>
+        <td>Handover report mandatory for all installation-linked maintenance jobs</td>
+        <td>No handover report found for MAN/7200 interior door installation; project traceability broken</td>
+        <td>No evidence of completion, installation standard, or as-built condition</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G5.5</td>
+        <td>Metric balance: First-Time Fix Rate, Repeat Visit Rate, CSAT alongside speed</td>
+        <td>Performance measured on ticket closure speed only — driving premature closures and recurring revisits</td>
+        <td>Metric misalignment incentivises wrong behaviours; quality blind spot</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">GAP-06: People Competence &amp; Conduct <span class="iso-tag">ISO 7.2, 7.3</span></div>
+    <table>
+      <tr><th>Ref</th><th>SOP / Requirement</th><th>Current State (Observed)</th><th>Gap</th><th>Severity</th></tr>
+      <tr>
+        <td class="td-ref">G6.1</td>
+        <td>Language proficiency standard for client-facing roles</td>
+        <td>Technician (Shanu) unable to communicate effectively with English-speaking client (MAN/7200)</td>
+        <td>Confusion, misunderstanding, client dissatisfaction; roles assigned without competence verification</td>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G6.2</td>
+        <td>Minimum client interaction competencies for all field staff</td>
+        <td>Drivers and carpenters unequipped to manage client interactions; technician refused to assess reported issue ("door ok")</td>
+        <td>Missed feedback; client dissatisfaction; conduct violation</td>
+        <td><span class="sev sev-major">MAJOR</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G6.3</td>
+        <td>Structured onboarding before field assignment; competency sign-off required</td>
+        <td>New drivers deployed with documentation roles and client-site responsibilities before onboarding complete</td>
+        <td>Quality risk; role scope exceeds verified competency</td>
+        <td><span class="sev sev-major">MAJOR</span></td>
+      </tr>
+      <tr>
+        <td class="td-ref">G6.4</td>
+        <td>Monthly performance feedback documented with standardised form, signed and filed</td>
+        <td>Monthly feedback verbal only; no documented record; no improvement baseline</td>
+        <td>No accountability trail; no evidence of management oversight</td>
+        <td><span class="sev sev-minor">MINOR</span></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- =================== PROCESS MAP =================== -->
+<div id="processmap" class="section">
+  <div class="section-title">Maintenance Process Map — Current State with Gap Overlay</div>
+  <p style="font-size:11px;color:#666;margin-bottom:14px">Based on field observations across Dubai (MAN9278, MAN9423, MAN9461), Abu Dhabi (MAN9192, MAN8747, MAN7200), and Al Ain (MAN8089, MAN9492, MAN9499). Red border = Critical gap identified at this step.</p>
+
+  <div class="legend" style="margin-bottom:16px">
+    <div class="legend-item"><div style="width:12px;height:12px;border:2px solid #e24b4a;border-radius:2px;display:inline-block"></div> Critical gap</div>
+    <div class="legend-item"><div style="width:12px;height:12px;border:2px solid #EF9F27;border-radius:2px;display:inline-block"></div> Major gap</div>
+    <div class="legend-item"><div style="width:12px;height:12px;background:#f5f4f0;border:1px solid #ccc;border-radius:2px;display:inline-block"></div> No current gap</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Phase 1: Intake &amp; Ticket Creation</div>
+    <div class="pmap">
+      <div class="pstep has-critical">
+        <div class="pstep-title">Client Contact</div>
+        <div class="pstep-actor">Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No formal complaint channel</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>WhatsApp only — no SLA</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Ticket Creation (Odoo)</div>
+        <div class="pstep-actor">Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No project linkage</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No scheduling preference field</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No SLA tier assigned</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Classification</div>
+        <div class="pstep-actor">Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Warranty vs. Paid: inconsistent</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>30-day rule not verified</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Client Confirmation</div>
+        <div class="pstep-actor">Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>NOT happening (F-001, F-002)</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>SLA clock starts without confirmation</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Phase 2: Scheduling &amp; Dispatch</div>
+    <div class="pmap">
+      <div class="pstep has-critical">
+        <div class="pstep-title">Team Assignment</div>
+        <div class="pstep-actor">Coordinator / In-Charge</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No competence-based roster</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Performance flags ignored (Shanu)</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No In-Charge to approve</div>
+      </div>
+      <div class="pstep has-major">
+        <div class="pstep-title">Materials Check</div>
+        <div class="pstep-actor">Technician / Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#EF9F27"></div>No pre-departure checklist</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#EF9F27"></div>Materials gaps discovered on site</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Dispatch</div>
+        <div class="pstep-actor">Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Dispatched without confirmation</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Late-night dispatch (10:44 PM)</div>
+      </div>
+      <div class="pstep">
+        <div class="pstep-title">Travel to Site</div>
+        <div class="pstep-actor">Site Team</div>
+        <div style="font-size:10px;color:#888">No gaps — travel itself not an audit focus</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Phase 3: On-Site Execution</div>
+    <div class="pmap">
+      <div class="pstep has-critical">
+        <div class="pstep-title">Client Greeting &amp; Scope Briefing</div>
+        <div class="pstep-actor">Lead Technician</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>NEVER observed (F-003, F-007)</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Entered private rooms without permission (F-004)</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Pre-Work Site Documentation</div>
+        <div class="pstep-actor">Lead Technician</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No photos taken (F-015, F-023)</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No floor / fixture protection (F-016, F-017)</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Task Execution</div>
+        <div class="pstep-actor">Site Team</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Improper technique (F-005, F-017, F-018)</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Odoo-only focus — no holistic check (F-006, F-009)</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No supervisor oversight</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Escalation (Out-of-Scope)</div>
+        <div class="pstep-actor">Site Team → Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No escalation path defined</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Teams close tasks unilaterally</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Phase 4: Task Close-Out &amp; Follow-Up</div>
+    <div class="pmap">
+      <div class="pstep has-critical">
+        <div class="pstep-title">Site Quality Check</div>
+        <div class="pstep-actor">Lead Technician</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Not performed (F-006, F-021)</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Additional defects not logged</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Customer Close-Out &amp; Sign-off</div>
+        <div class="pstep-actor">Lead Technician</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Not happening — all 3 regions (F-025, F-029)</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>No acknowledgement in Odoo</div>
+      </div>
+      <div class="pstep has-critical">
+        <div class="pstep-title">Odoo Ticket Close-Out</div>
+        <div class="pstep-actor">Site Team / Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Closed without evidence</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#e24b4a"></div>Cancellations without governance (F-031)</div>
+      </div>
+      <div class="pstep has-major">
+        <div class="pstep-title">Post-Visit Follow-Up (DP→FM)</div>
+        <div class="pstep-actor">Coordinator</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#EF9F27"></div>No 30-day post-installation check</div>
+        <div class="gap-item"><div class="gap-dot" style="background:#EF9F27"></div>No CSAT touchpoint</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Gap Density Summary by Process Phase</div>
+    <table>
+      <tr><th>Phase</th><th>Critical Gaps</th><th>Major Gaps</th><th>Density Score</th></tr>
+      <tr>
+        <td>Phase 1: Intake &amp; Ticket Creation</td>
+        <td>5</td><td>1</td>
+        <td>
+          <div class="score-bar-wrap" style="width:200px">
+            <div class="score-bar bar-red" style="width:100%"></div>
+          </div>
+          <small>Very High</small>
+        </td>
+      </tr>
+      <tr>
+        <td>Phase 2: Scheduling &amp; Dispatch</td>
+        <td>3</td><td>2</td>
+        <td>
+          <div class="score-bar-wrap" style="width:200px">
+            <div class="score-bar bar-red" style="width:80%"></div>
+          </div>
+          <small>High</small>
+        </td>
+      </tr>
+      <tr>
+        <td>Phase 3: On-Site Execution</td>
+        <td>8</td><td>1</td>
+        <td>
+          <div class="score-bar-wrap" style="width:200px">
+            <div class="score-bar bar-red" style="width:100%"></div>
+          </div>
+          <small>Very High</small>
+        </td>
+      </tr>
+      <tr>
+        <td>Phase 4: Close-Out &amp; Follow-Up</td>
+        <td>4</td><td>2</td>
+        <td>
+          <div class="score-bar-wrap" style="width:200px">
+            <div class="score-bar bar-red" style="width:90%"></div>
+          </div>
+          <small>Very High</small>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- =================== ODOO TRANSACTION FLOW =================== -->
+<div id="odoo" class="section">
+  <div class="section-title">Odoo Transaction Flow — Current State vs. Required State</div>
+  <p style="font-size:11px;color:#666;margin-bottom:16px">Red boxes indicate missing or non-compliant Odoo steps that must be implemented. Based on S-001 through S-022 findings and observed ticket behaviour.</p>
+
+  <div class="card">
+    <div class="card-title">Current Odoo Workflow — Observed (with gaps highlighted)</div>
+    <div class="odoo-flow">
+      <div class="odoo-stage">
+        <div class="odoo-num">1</div>
+        <div class="odoo-box odoo-gap">
+          <div class="odoo-box-title">⚠ Ticket Creation — INCOMPLETE</div>
+          <div class="odoo-box-detail">Client name, location, issue type entered. <strong>Missing:</strong> scheduling preference, SLA tier, project linkage, priority classification, warranty verification flag. No mandatory field enforcement.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">2</div>
+        <div class="odoo-box odoo-gap">
+          <div class="odoo-box-title">⚠ Assignment — NO COMPETENCE CHECK</div>
+          <div class="odoo-box-detail">Ticket assigned to available team without competence or leave check. No In-Charge approval step. No materials pre-check triggering. SLA clock starts at assignment, not at confirmed arrival.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">3</div>
+        <div class="odoo-box odoo-gap">
+          <div class="odoo-box-title">⚠ Dispatch — NO CONFIRMATION GATE</div>
+          <div class="odoo-box-detail">Team dispatched without Odoo capturing client confirmation. No blocking gate. Dispatch possible at any hour. No pre-work checklist linked to task type.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">4</div>
+        <div class="odoo-box odoo-gap">
+          <div class="odoo-box-title">⚠ On-Site Execution — EVIDENCE-FREE</div>
+          <div class="odoo-box-detail">No pre-work photo upload step. No site protection confirmation. No client consent capture. Teams update Odoo only at close-out if at all. No SQC (Site Quality Check) step exists in Odoo workflow.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">5</div>
+        <div class="odoo-box odoo-gap">
+          <div class="odoo-box-title">⚠ Material Replacement — NO JUSTIFICATION FIELD</div>
+          <div class="odoo-box-detail">Materials replaced without Odoo field for technical justification. No In-Charge sign-off required for replacements above cost threshold. Same individuals raise and approve material requests.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">6</div>
+        <div class="odoo-box odoo-gap">
+          <div class="odoo-box-title">⚠ Ticket Close-Out — NO EVIDENCE GATE</div>
+          <div class="odoo-box-detail">Ticket closed without: customer signature, pre/post photos, SQC confirmation, or sub-ticket for unresolved issues. Cancellations possible without justification or reviewer sign-off. MAN14624 cancelled suppressing a complaint.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Required Odoo Workflow — Target State (Post-Remediation)</div>
+    <div class="odoo-flow">
+      <div class="odoo-stage">
+        <div class="odoo-num">1</div>
+        <div class="odoo-box">
+          <div class="odoo-box-title">Ticket Creation — Mandatory Fields</div>
+          <div class="odoo-box-detail">Required: client name, location, contact, issue description, photos/video, scheduling preference, SLA tier (Urgent/Medium/Low), project linkage, warranty eligibility flag (30-day check). Cannot submit without all fields.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">2</div>
+        <div class="odoo-box">
+          <div class="odoo-box-title">Assignment — Competence &amp; Leave Gate</div>
+          <div class="odoo-box-detail">Team assignment validated against competency matrix and leave calendar. Staff with active performance flags require In-Charge co-approval. Pre-departure materials checklist auto-generated from task type. Leave-aware auto-reassignment if assignee unavailable.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">3</div>
+        <div class="odoo-box">
+          <div class="odoo-box-title">Client Confirmation Gate</div>
+          <div class="odoo-box-detail">Coordinator must confirm client availability and log confirmation in Odoo before dispatch is permitted. No-dispatch-without-confirmation rule enforced. SLA clock starts at confirmed appointment, not at task assignment. Dispatch time restricted to defined working hours unless In-Charge authorises after-hours.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">4</div>
+        <div class="odoo-box">
+          <div class="odoo-box-title">On-Site Execution — Evidence Checkpoints</div>
+          <div class="odoo-box-detail">Step 4a: Pre-work photos (min 3) uploaded before work can begin. Step 4b: Site protection confirmation checkbox. Step 4c: Client consent acknowledgement (scope explained). Step 4d: Technical task execution per SOP. Step 4e: SQC — additional defects logged as sub-tickets. Material replacements require technical justification field + In-Charge sign-off above threshold.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">5</div>
+        <div class="odoo-box">
+          <div class="odoo-box-title">Materials &amp; Escalation Flow</div>
+          <div class="odoo-box-detail">Materials shortage triggers mandatory Coordinator notification sub-task in Odoo. Follow-up sub-ticket auto-created. Client receives confirmed completion date within 24 hours. Out-of-scope requests generate referral to Sales or Installation department with referral reference number.</div>
+        </div>
+      </div>
+      <div class="odoo-stage">
+        <div class="odoo-num">6</div>
+        <div class="odoo-box">
+          <div class="odoo-box-title">Ticket Close-Out — Evidence Gate</div>
+          <div class="odoo-box-detail">Cannot close without: post-work photos, customer acknowledgement (digital signature / SMS confirmation / written sign-off), SQC confirmation, and resolution of all sub-tickets or escalation trail. Cancellation requires: documented justification, independent reviewer sign-off, min 3 logged contact attempts. SLA performance auto-reported to In-Charge dashboard monthly.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Odoo Configuration Priority Matrix</div>
+    <table>
+      <tr><th>Configuration Item</th><th>Priority</th><th>ISO Ref</th><th>CAR Ref</th></tr>
+      <tr>
+        <td>Mandatory field enforcement at ticket creation (scheduling pref, project link, SLA tier)</td>
+        <td><span class="sev sev-critical">IMMEDIATE</span></td>
+        <td>7.5, 8.5.2</td>
+        <td>S-001, S-010</td>
+      </tr>
+      <tr>
+        <td>Client confirmation gate before dispatch (no-dispatch-without-confirmation)</td>
+        <td><span class="sev sev-critical">IMMEDIATE</span></td>
+        <td>8.2.1, 8.5.1</td>
+        <td>F-001, F-002</td>
+      </tr>
+      <tr>
+        <td>Customer acknowledgement step in close-out (digital signature / SMS)</td>
+        <td><span class="sev sev-critical">IMMEDIATE</span></td>
+        <td>8.6, 7.5</td>
+        <td>S-005, F-025, F-029</td>
+      </tr>
+      <tr>
+        <td>Pre-work photo upload gate before execution begins</td>
+        <td><span class="sev sev-critical">IMMEDIATE</span></td>
+        <td>7.5, 8.5.1</td>
+        <td>F-015, F-016, F-023</td>
+      </tr>
+      <tr>
+        <td>Cancellation governance workflow (justification + reviewer + contact attempts)</td>
+        <td><span class="sev sev-critical">IMMEDIATE</span></td>
+        <td>7.5, 8.7</td>
+        <td>S-003, F-031</td>
+      </tr>
+      <tr>
+        <td>Leave calendar integration with auto-reassignment rules</td>
+        <td><span class="sev sev-major">30 DAYS</span></td>
+        <td>8.5.2, 5.3</td>
+        <td>S-014</td>
+      </tr>
+      <tr>
+        <td>SLA breach alerts and monthly dashboard reporting</td>
+        <td><span class="sev sev-major">30 DAYS</span></td>
+        <td>9.1.1, 8.5.1</td>
+        <td>S-001, S-002</td>
+      </tr>
+      <tr>
+        <td>Segregation of duties workflow (material request raiser ≠ approver)</td>
+        <td><span class="sev sev-critical">IMMEDIATE</span></td>
+        <td>8.4.3, 5.3</td>
+        <td>S-008</td>
+      </tr>
+      <tr>
+        <td>Technical justification field for all material replacements</td>
+        <td><span class="sev sev-major">30 DAYS</span></td>
+        <td>7.5, 8.7</td>
+        <td>S-009</td>
+      </tr>
+      <tr>
+        <td>KPI dashboard: First-Time Fix Rate, Repeat Visit Rate, CSAT per ticket</td>
+        <td><span class="sev sev-major">30 DAYS</span></td>
+        <td>9.1.1, 9.1.2</td>
+        <td>S-002</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- =================== PCE READINESS =================== -->
+<div id="pce" class="section">
+  <div class="section-title">PCE Readiness Assessment — Roles vs. Observed Competence Gaps</div>
+  <p style="font-size:11px;color:#666;margin-bottom:16px">Based on field observations from Oct 2025 audit. This pre-assessment informs PCE sampling priorities for the May 2026 evaluation. Each criterion is rated against available evidence.</p>
+
+  <div class="stats-row">
+    <div class="stat-card red"><div class="stat-num">0</div><div class="stat-lbl">Criteria at "Meets Expectations"</div></div>
+    <div class="stat-card red"><div class="stat-num">40+</div><div class="stat-lbl">Criteria rated "Not Competent"</div></div>
+    <div class="stat-card amber"><div class="stat-num">ALL</div><div class="stat-lbl">Roles: Immediate Dev Plans Required</div></div>
+    <div class="stat-card red"><div class="stat-num">ALL</div><div class="stat-lbl">Bands: Below 60% (Unsatisfactory)</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pre-Assessment: Maintenance Site Teams</div>
+    <div class="pce-role">
+      <table>
+        <tr><th style="width:70px">Criterion</th><th>Description</th><th>Observed Evidence</th><th>Pre-score (1–4)</th><th>Priority Action</th></tr>
+        <tr>
+          <td class="td-ref">ST-01</td>
+          <td>Hardware component identification</td>
+          <td>Not tested in field; teams unable to identify defects holistically (F-006)</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Structured hardware ID training + certification</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-02</td>
+          <td>3-hour task limit awareness and pacing</td>
+          <td>Multiple visits exceeded 3hr due to material trips and rework (F-014, F-005)</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Pre-departure checklist; time management coaching</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-03</td>
+          <td>Smart lock programming</td>
+          <td>Not observed in field visits reviewed</td>
+          <td style="color:#888;font-weight:700">N/A</td>
+          <td>Include in PCE Day 3 structured test</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-04</td>
+          <td>SOW boundary knowledge and escalation triggers</td>
+          <td>Teams executing only Odoo tasks; no holistic awareness; refused to assess reported issues (F-010)</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>SOW briefing + escalation matrix training</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-05</td>
+          <td>Odoo real-time update during/after task</td>
+          <td>Close-out done inconsistently; no pre-work step; evidence not uploaded (F-015 to F-022)</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Mandatory Odoo workflow training + spot-check regime</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-06</td>
+          <td>Correct tool and emergency kit use</td>
+          <td>Ladder dirty and removed by supervisor without replacement (F-011); WD-40 misapplied (F-018)</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Equipment hygiene standard; issuance log; chemical SOP</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-07</td>
+          <td>SLA target awareness</td>
+          <td>No evidence teams know SLA targets; no SLA document exists (S-001)</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Publish SLA policy; team briefing within 14 days</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-08</td>
+          <td>Warranty vs. misuse identification on site</td>
+          <td>No evidence of classification capability; teams refer all decisions upward or ignore</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Warranty classification training with scenario cards</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-09</td>
+          <td>Escalation path when task is beyond scope</td>
+          <td>Teams close tasks unilaterally; no escalation path followed (F-020, F-022)</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Decision authority matrix — issue and acknowledge</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-10</td>
+          <td>Odoo close-out with client acceptance</td>
+          <td>Close-out with no client confirmation; no signature; no photo evidence across all regions</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Odoo close-out gate + customer sign-off SOP; training within 14 days</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-11</td>
+          <td>Training records and qualifications</td>
+          <td>New driver deployed without onboarding sign-off (F-019); no competency evidence found</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Mandatory training records audit; skills matrix rebuild</td>
+        </tr>
+        <tr>
+          <td class="td-ref">ST-12</td>
+          <td>Quality policy awareness and customer satisfaction contribution</td>
+          <td>Technician stated "door ok" dismissing client concern; no awareness of quality standards demonstrated</td>
+          <td style="color:#a32d2d;font-weight:700">1</td>
+          <td>Quality policy briefing; conduct re-training; CAR for Shanu</td>
+        </tr>
+      </table>
+      <div style="margin-top:10px;padding:8px;background:#fce8e8;border-radius:4px;font-size:11px">
+        <strong>Pre-Assessment Band: UNSATISFACTORY</strong> — Estimated score: ~12/48 (25%). Immediate CAR required. PCE must be completed within 14 days of CAR issuance.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pre-Assessment: Maintenance Coordinator</div>
+    <div class="pce-role">
+      <table>
+        <tr><th style="width:70px">Criterion</th><th>Description</th><th>Observed Evidence</th><th>Pre-score (1–4)</th></tr>
+        <tr><td class="td-ref">CO-01</td><td>Role responsibilities and interface clarity</td><td>Dispatcher function without ownership; routes unclear between In-Charge (absent) and HCS</td><td style="color:#e24b4a;font-weight:700">1</td></tr>
+        <tr><td class="td-ref">CO-02</td><td>Odoo ticket creation — mandatory fields</td><td>Scheduling preference, project linkage, SLA tier all missing from created tickets</td><td style="color:#e24b4a;font-weight:700">1</td></tr>
+        <tr><td class="td-ref">CO-03</td><td>Priority classification and SLA communication</td><td>No SLA tiers exist to classify against (S-001)</td><td style="color:#e24b4a;font-weight:700">1</td></tr>
+        <tr><td class="td-ref">CO-04</td><td>30-day installation handoff rule</td><td>Not verified at ticket creation in any observed case</td><td style="color:#e24b4a;font-weight:700">1</td></tr>
+        <tr><td class="td-ref">CO-05</td><td>Warranty vs. Paid classification</td><td>Inconsistent; not validated by evidence in reviewed tickets</td><td style="color:#e24b4a;font-weight:700">1-2</td></tr>
+        <tr><td class="td-ref">CO-06</td><td>Professional client communication routing</td><td>WhatsApp-only; informal; script non-compliance across all regions (S-006)</td><td style="color:#e24b4a;font-weight:700">1</td></tr>
+        <tr><td class="td-ref">CO-07</td><td>Escalation triggers knowledge</td><td>No escalation framework; ad hoc or not done</td><td style="color:#e24b4a;font-weight:700">1</td></tr>
+        <tr><td class="td-ref">CO-08</td><td>Warranty terms awareness</td><td>Not demonstrated; classification errors observed</td><td style="color:#e24b4a;font-weight:700">1-2</td></tr>
+        <tr><td class="td-ref">CO-09</td><td>New product order routing to Sales</td><td>Not evidenced as systematically applied</td><td style="color:#888;font-weight:700">N/A</td></tr>
+        <tr><td class="td-ref">CO-10</td><td>Odoo proficiency (search, update, assign, close)</td><td>Basic usage only; SLA and project linkage features unused</td><td style="color:#e24b4a;font-weight:700">2</td></tr>
+      </table>
+      <div style="margin-top:10px;padding:8px;background:#fce8e8;border-radius:4px;font-size:11px">
+        <strong>Pre-Assessment Band: UNSATISFACTORY</strong> — Estimated score: ~11/40 (27%). Structured development plan required within 30 days. Re-evaluate at next cycle.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pre-Assessment: Maintenance In-Charge</div>
+    <div class="pce-role">
+      <div style="padding:10px;background:#faeeda;border-radius:4px;font-size:11px;margin-bottom:10px">
+        <strong>⚠ Role Does Not Currently Exist.</strong> Finding S-007 (Critical) — no accountability figure exists at the operational level. PCE cannot be conducted until the role is designated. Action: Designate In-Charge within 14 days of CAR issuance, then conduct PCE on the appointed individual.
+      </div>
+      <table>
+        <tr><th style="width:70px">Criterion</th><th>Description</th><th>Required Action Before PCE</th></tr>
+        <tr><td class="td-ref">IC-01 to IC-10</td><td>All leadership, supervision, SLA management, CAR, and quarterly review criteria</td><td>Role designation required. Once appointed: 30-day onboarding before full PCE. Interim evaluation at Day 14 on core criteria (IC-01, IC-02, IC-05, IC-07).</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">PCE Sampling Plan — Day Allocation (May 2026)</div>
+    <table>
+      <tr><th>Day</th><th>Focus</th><th>Roles</th><th>Key Priority from SEA Gaps</th></tr>
+      <tr>
+        <td class="td-ref">Day 1</td>
+        <td>Opening Meeting + Record Review</td>
+        <td>In-Charge, Coordinator</td>
+        <td>Collect training records (ST-11), personnel files — expect significant gaps</td>
+      </tr>
+      <tr>
+        <td class="td-ref">Day 2</td>
+        <td>Coordinator Evaluation</td>
+        <td>Coordinator</td>
+        <td>Focus: CO-02 (Odoo), CO-05 (warranty/paid), CO-07 (escalation). Observe live ticket creation and a client call.</td>
+      </tr>
+      <tr>
+        <td class="td-ref">Day 3</td>
+        <td>Site Teams Evaluation</td>
+        <td>Min 3 technicians (DXB, AUH, AAN)</td>
+        <td>Focus: ST-04 (scope boundary), ST-05 (Odoo real-time), ST-09 (escalation), ST-10 (close-out). Live site observation mandatory.</td>
+      </tr>
+      <tr>
+        <td class="td-ref">Day 4</td>
+        <td>In-Charge Evaluation</td>
+        <td>Maintenance In-Charge</td>
+        <td>IC-02 (Odoo monitoring), IC-05 (team supervision), IC-07 (CAR competency), IC-10 (onboarding records)</td>
+      </tr>
+      <tr>
+        <td class="td-ref">Day 5</td>
+        <td>Head of Customer Support</td>
+        <td>HCS</td>
+        <td>HCS-05 (CSAT programme), HCS-08 (complaint patterns), HCS-03 (major warranty claim records)</td>
+      </tr>
+      <tr>
+        <td class="td-ref">Day 6</td>
+        <td>Scoring + Closing Meeting</td>
+        <td>All stakeholders</td>
+        <td>Compile PCE scores; present development actions; confirm CAR timelines</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- =================== CAR REGISTER =================== -->
+<div id="car" class="section">
+  <div class="section-title">Corrective Action Request Register</div>
+  <p style="font-size:11px;color:#666;margin-bottom:14px">Per GASD-IAF-001 v2.0 §4.5 — CAR verification timelines: Critical ≤7 days, Major ≤30 days, Minor ≤45 days.</p>
+
+  <div class="card">
+    <div class="card-title">Priority 1 — Critical CARs (Immediate Action Required — Within 7 Working Days)</div>
+    <table>
+      <tr><th>CAR Ref</th><th>Finding</th><th>ISO Clause</th><th>Required Action</th><th>Owner</th><th>Due</th></tr>
+      <tr>
+        <td class="td-ref">CAR-001</td>
+        <td>No SLA framework defined or communicated (S-001)</td>
+        <td>8.5.1, 9.1.1</td>
+        <td>Define SLA tiers (Urgent 24hr / Medium 48hr / Low 5-7 days). Publish formal SLA document. Implement SLA tracking in Odoo with breach alerts.</td>
+        <td>In-Charge + GASD</td>
+        <td style="color:#a32d2d;font-weight:700">7 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-002</td>
+        <td>No Maintenance In-Charge role (S-007)</td>
+        <td>5.3, 7.1.2</td>
+        <td>Designate Maintenance In-Charge with defined authority, site spot-check schedule, Odoo performance review mandate, and CAR authority.</td>
+        <td>HCS + HR</td>
+        <td style="color:#a32d2d;font-weight:700">7 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-003</td>
+        <td>No customer close-out signature / acknowledgement across all 3 regions (S-005, F-025, F-029)</td>
+        <td>8.6, 7.5</td>
+        <td>Implement mandatory customer acknowledgement in Odoo close-out (digital signature or SMS confirmation). Training for all site teams within 14 days of CAR issuance.</td>
+        <td>Coordinator + In-Charge</td>
+        <td style="color:#a32d2d;font-weight:700">14 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-004</td>
+        <td>No pre-work site documentation or protection (F-015, F-016, F-023)</td>
+        <td>7.5, 8.5.1</td>
+        <td>Mandatory pre-work photos (min 3) uploaded to Odoo before work begins. Site protection kit (floor sheets, masking tape) standard issue. Pre-work checklist in Odoo close-out.</td>
+        <td>In-Charge + Site Teams</td>
+        <td style="color:#a32d2d;font-weight:700">14 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-005</td>
+        <td>Cancelled ticket governance absent — MAN14624 complaint suppressed (S-003, F-031)</td>
+        <td>7.5, 8.7, 10.2</td>
+        <td>Cancellation governance framework: documented justification + independent reviewer + min 3 contact attempts + recorded client interaction required. MAN14624 to undergo full RCA — colour-change complaint must be investigated and resolved.</td>
+        <td>GASD + In-Charge</td>
+        <td style="color:#a32d2d;font-weight:700">7 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-006</td>
+        <td>No client confirmation gate before dispatch (F-001, F-002)</td>
+        <td>8.2.1, 8.5.1</td>
+        <td>No task to be dispatched without confirmed client availability. Odoo dispatch rules to enforce confirmation field. SLA clock to start at confirmed appointment time only.</td>
+        <td>Coordinator + In-Charge</td>
+        <td style="color:#a32d2d;font-weight:700">7 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-007</td>
+        <td>Segregation of duties failure in material requests (S-008)</td>
+        <td>8.4.3, 5.3</td>
+        <td>Requests raised by Coordinator, approved by In-Charge, second reviewer (GASD or HOD) for requests above defined threshold. Odoo workflow to enforce separation.</td>
+        <td>GASD + In-Charge</td>
+        <td style="color:#a32d2d;font-weight:700">7 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-008</td>
+        <td>Technician conduct — dismissing client concern, entering private room without permission (F-004, F-010)</td>
+        <td>7.2, 8.2.1</td>
+        <td>Formal competence review for named technician (Shanu). Zero-tolerance policy for entering private spaces without consent. Conduct CAR with disciplinary note. Escalation protocol re-training for all teams.</td>
+        <td>In-Charge + HR</td>
+        <td style="color:#a32d2d;font-weight:700">7 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-009</td>
+        <td>WhatsApp communication script non-compliance — all 3 regions (S-006)</td>
+        <td>8.2.1, 7.4</td>
+        <td>Reissue communication templates with mandatory compliance confirmation per team. Regional supervisors to conduct weekly WhatsApp spot-checks. Non-compliance logged as competence finding.</td>
+        <td>In-Charge + Coordinators</td>
+        <td style="color:#a32d2d;font-weight:700">7 days</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-010</td>
+        <td>Metric misalignment — speed over quality (S-002)</td>
+        <td>9.1.1, 9.1.2</td>
+        <td>Revise performance KPIs to include First-Time Fix Rate, Repeat Visit Rate, CSAT per ticket, and SLA compliance. Ticket closure speed to be secondary metric only. Dashboard in Odoo within 30 days.</td>
+        <td>HCS + GASD</td>
+        <td style="color:#a32d2d;font-weight:700">30 days</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Priority 2 — Major CARs (Within 30 Days)</div>
+    <table>
+      <tr><th>CAR Ref</th><th>Finding</th><th>Required Action</th><th>Owner</th></tr>
+      <tr>
+        <td class="td-ref">CAR-011</td>
+        <td>Maintenance tickets not linked to installation projects in Odoo (S-010)</td>
+        <td>Configure Odoo to require project-ticket linkage at maintenance ticket creation.</td>
+        <td>IT / Odoo Admin</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-012</td>
+        <td>No formal DP→FM handover protocol with post-installation follow-up (S-011)</td>
+        <td>Define 30-day post-installation check, CSAT touchpoint, and open-issue transfer record. Assign to Coordinator with In-Charge oversight.</td>
+        <td>Coordinator + In-Charge</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-013</td>
+        <td>WhatsApp response SLA absent; systemic delays (S-021)</td>
+        <td>Set WhatsApp first-response SLA at 1 hour; escalation trigger at 2 hours; supervisor copy at 4 hours.</td>
+        <td>In-Charge</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-014</td>
+        <td>Outdated operational templates — teams using non-current materials (S-012)</td>
+        <td>Conduct template audit. All active templates reviewed, version-controlled, and dated. No team to use unlisted template.</td>
+        <td>GASD + Coordinator</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-015</td>
+        <td>Field teams (drivers, carpenters) unequipped for client interaction (S-019)</td>
+        <td>Define minimum client interaction competencies. Deliver training on: greeting, scope explanation, issue reporting, escalation. Reassess client-facing eligibility.</td>
+        <td>In-Charge + HR</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-016</td>
+        <td>No call recording system for maintenance interactions (S-015)</td>
+        <td>Implement call recording for all maintenance inbound/outbound calls. Stored for min 90 days. Monthly QA sample review.</td>
+        <td>IT + In-Charge</td>
+      </tr>
+      <tr>
+        <td class="td-ref">CAR-017</td>
+        <td>No technical justification for material replacements (S-009)</td>
+        <td>Add technical justification field in Odoo for all material replacements; In-Charge sign-off required above cost threshold.</td>
+        <td>IT / Odoo Admin + In-Charge</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Training &amp; Development Action Plan</div>
+    <table>
+      <tr><th>Role</th><th>Gap Area</th><th>Proposed Training</th><th>Target Completion</th><th>Evidence Required</th></tr>
+      <tr>
+        <td>All Site Teams</td>
+        <td>Pre-work protocol, site protection, photos</td>
+        <td>Hands-on walkthrough; Odoo photo upload practice</td>
+        <td>14 days</td>
+        <td>Competency sign-off per technician</td>
+      </tr>
+      <tr>
+        <td>All Site Teams</td>
+        <td>Customer greeting and close-out SOP</td>
+        <td>Role-play scenario training; customer communication checklist</td>
+        <td>14 days</td>
+        <td>Trainer sign-off; PCE Day 3 verification</td>
+      </tr>
+      <tr>
+        <td>All Site Teams</td>
+        <td>Technical SOPs: hinge replacement, chemical application, door levelling</td>
+        <td>Written SOP issued + practical demonstration + assessment</td>
+        <td>21 days</td>
+        <td>Assessment record; SOP acknowledgement</td>
+      </tr>
+      <tr>
+        <td>Shanu (Technician)</td>
+        <td>Conduct, client interaction, quality ownership</td>
+        <td>Individual coaching + formal CAR; supervisor-observed site visit</td>
+        <td>7 days (CAR timeline)</td>
+        <td>Formal conduct review record</td>
+      </tr>
+      <tr>
+        <td>Coordinator</td>
+        <td>Odoo mandatory fields, scheduling confirmation SOP, warranty classification</td>
+        <td>Odoo workflow training; SOP briefing; scenario-based interview prep</td>
+        <td>21 days</td>
+        <td>PCE Day 2 observation and interview</td>
+      </tr>
+      <tr>
+        <td>All Teams</td>
+        <td>SLA awareness, WhatsApp script compliance</td>
+        <td>Team briefing on SLA document; script distribution with acknowledgement</td>
+        <td>7 days</td>
+        <td>Signed acknowledgement per team member</td>
+      </tr>
+      <tr>
+        <td>In-Charge (once designated)</td>
+        <td>CAR process, Odoo monitoring, supervision methodology</td>
+        <td>GASD-led onboarding; shadowing on audit fieldwork</td>
+        <td>30 days post-designation</td>
+        <td>Training matrix entry; PCE Day 4 evaluation</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+</div><!-- /page -->
+<script>
+function show(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
